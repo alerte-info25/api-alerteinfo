@@ -974,7 +974,7 @@ Route::group(
             // store alerte-info web abonnement data
             Route::post('/store_alerteinfo_web_abonnement_data',  'store_alerteinfo_web_abonnement_data2');
 
-            // get alerte-info web abonnement data
+            // get alerte-info w    eb abonnement data
             Route::get('/get_alerteinfo_web_abonnement_data/{account_code_unique}',  'checkSubscriberSubscriptionData');
 
             // get alerte-info web about data

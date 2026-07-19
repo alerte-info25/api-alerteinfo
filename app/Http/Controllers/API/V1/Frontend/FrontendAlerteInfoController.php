@@ -1441,7 +1441,13 @@ class FrontendAlerteInfoController extends Controller
         $abonneData,
         $description
     ) {
+        Log::info('Generation du lien de paiement GeniusPay', [
+            'currentAbonnementData' => $currentAbonnementData,
+            'abonneData' => $abonneData,
+            'description' => $description
+        ]);
         try {
+
 
             $payload = [
                 'amount' => (int) $currentAbonnementData->montant,

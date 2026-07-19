@@ -33,3 +33,4 @@ return new class extends Migration
         Schema::dropIfExists('abonnements_mobile_models');
     }
 };
+

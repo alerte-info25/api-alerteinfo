@@ -18,6 +18,9 @@ return new class extends Migration
             $table->string('first_name')->nullable();
             $table->string('last_name')->nullable();
             $table->string('photo')->nullable();
+            $table->string('matricule')->nullable();
+            $table->string('service')->nullable();
+            $table->string('fonction')->nullable();
             $table->boolean('status')->default(0);
             $table->string('slug')->nullable();
             $table->timestamps();
