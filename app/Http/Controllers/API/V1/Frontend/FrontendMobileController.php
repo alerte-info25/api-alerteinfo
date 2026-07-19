@@ -2294,4 +2294,173 @@ class FrontendMobileController extends Controller
         }
     }
 
+    /**
+     * Vérifie le paiement GeniusPay et active l'abonnement mobile.
+     */
+    public function confirmGeniusPayMobilePayment(Request $request)
+    {
+        try {
+            $user = Auth::user();
+            if (!$user) {
+                return response()->json([
+                    'status' => 'error',
+                    'code' => 401,
+                    'message' => 'Non authentifié',
+                ], 401);
+            }
+
+            $reference = $request->input('reference');
+            if (empty($reference)) {
+                return response()->json([
+                    'status' => 'error',
+                    'code' => 400,
+                    'message' => 'Référence de paiement obligatoire',
+                ], 400);
+            }
+
+            $abonne = AbonnesMobileModels::where('user_id', $user->id)->first();
+            if (!$abonne) {
+                return response()->json([
+                    'status' => 'error',
+                    'code' => 404,
+                    'message' => 'Abonné non trouvé',
+                ], 404);
+            }
+
+            $abonnement = AbonnementsMobileModels::where('payment_reference', $reference)
+                ->where('abonne_id', $abonne->id)
+                ->first();
+
+            if (!$abonnement) {
+                return response()->json([
+                    'status' => 'error',
+                    'code' => 404,
+                    'message' => 'Abonnement introuvable pour cette référence',
+                ], 404);
+            }
+
+            if ((int) $abonnement->payments === 1) {
+                return response()->json([
+                    'status' => 'success',
+                    'code' => 200,
+                    'message' => 'Abonnement déjà activé',
+                    'already_paid' => true,
+                ]);
+            }
+
+            $webviewSuccess = filter_var(
+                $request->input('webview_success', false),
+                FILTER_VALIDATE_BOOLEAN
+            );
+            $isSandbox = str_starts_with((string) GeniusMarchand::getApiKey(), 'pk_sandbox_')
+                || str_starts_with((string) $reference, 'SANDBOX_');
+
+            $json = null;
+            $paymentStatus = null;
+            for ($attempt = 1; $attempt <= 3; $attempt++) {
+                $response = Http::withHeaders([
+                    'X-API-Key' => GeniusMarchand::getApiKey(),
+                    'X-API-Secret' => GeniusMarchand::getApiSecret(),
+                    'Accept' => 'application/json',
+                ])->get(GeniusMarchand::getBaseUrl() . '/payments/' . $reference);
+
+                $json = $response->json();
+                Log::info('GENIUSPAY CONFIRM MOBILE', [
+                    'attempt' => $attempt,
+                    'body' => is_array($json) ? $json : ['raw' => $response->body()],
+                ]);
+
+                $paymentStatus = $json['data']['status']
+                    ?? $json['status']
+                    ?? null;
+
+                if (in_array($paymentStatus, ['completed', 'success', 'paid'], true)) {
+                    break;
+                }
+
+                if ($attempt < 3) {
+                    usleep(700000);
+                }
+            }
+
+            $verifiedByApi = in_array($paymentStatus, ['completed', 'success', 'paid'], true);
+            $sandboxFallback = !$verifiedByApi
+                && $isSandbox
+                && $webviewSuccess
+                && (
+                    ($json['error']['code'] ?? null) === 'TRANSACTION_NOT_FOUND'
+                    || $paymentStatus === null
+                );
+
+            if (!$verifiedByApi && !$sandboxFallback) {
+                return response()->json([
+                    'status' => 'error',
+                    'code' => 402,
+                    'message' => 'Paiement non confirmé auprès de GeniusPay',
+                    'payment_status' => $paymentStatus,
+                    'geniuspay' => $json,
+                ], 402);
+            }
+
+            if ($sandboxFallback) {
+                Log::warning('GENIUSPAY SANDBOX CONFIRM WITHOUT API STATUS', [
+                    'reference' => $reference,
+                    'abonne_id' => $abonne->id,
+                    'abonnement_code' => $abonnement->abonnement_code,
+                ]);
+            }
+
+            $amount = $json['data']['amount'] ?? $abonnement->montant_abonnements;
+            $paymentMethod = $json['data']['payment_method']
+                ?? ($sandboxFallback ? 'GeniusPay Sandbox' : 'GeniusPay');
+            $description = $json['data']['description'] ?? 'Abonnement mobile Alerte Info';
+
+            DB::beginTransaction();
+            try {
+                $abonnement->payments = 1;
+                $abonnement->payment_reference = $reference;
+                $abonnement->save();
+
+                DB::table('abonnes_mobile_models')
+                    ->where('id', $abonne->id)
+                    ->update([
+                        'status_abonnement' => 1,
+                        'updated_at' => Carbon::now(),
+                    ]);
+
+                $existingTx = TransactionsModels::where('transaction_id', $reference)->first();
+                if (!$existingTx) {
+                    $transaction = new TransactionsModels();
+                    $transaction->transaction_id = $reference;
+                    $transaction->montant = $amount;
+                    $transaction->operations = $description;
+                    $transaction->method_payment = is_string($paymentMethod) ? $paymentMethod : 'GeniusPay';
+                    $transaction->date_transaction = Carbon::now()->format('Y-m-d H:i:s');
+                    $transaction->status = 'completed';
+                    $transaction->save();
+                }
+
+                DB::commit();
+            } catch (\Throwable $e) {
+                DB::rollBack();
+                throw $e;
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'code' => 200,
+                'message' => 'Abonnement activé avec succès',
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('CONFIRM GENIUSPAY MOBILE ERROR', [
+                'message' => $e->getMessage(),
+            ]);
+            return response()->json([
+                'status' => 'error',
+                'code' => 500,
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
 }

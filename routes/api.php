@@ -1098,6 +1098,7 @@ Route::group(
 
             Route::get('/forfaits_list', 'forfaitsList');
             Route::post('/add_user_abonnement', 'store_abonne_abonnements2');
+            Route::post('/confirm_geniuspay_mobile_payment', 'confirmGeniusPayMobilePayment');
             // Route::any('/notify', 'notify');
 
             // Route pour obtenir les détails d'un abonnement via le code d'abonnement

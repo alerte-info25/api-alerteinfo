@@ -14,15 +14,14 @@ return new class extends Migration
         Schema::create('depeche_models', function (Blueprint $table) {
             $table->id();
             $table->string('author')->nullable();
-            $table->string('rubrique_libelle')->nullable();
-            $table->string('pays_id')->nullable();
+            $table->unsignedInteger('rubrique_id');
+            $table->unsignedInteger('pays_id');
+            $table->unsignedInteger('genre_id');
             $table->text('titre')->nullable();
             $table->text('lead')->nullable();
             $table->text('legende')->nullable();
             $table->string('media_url')->nullable();
-            $table->text('contenus')->nullable();
-            $table->integer('like_counter')->default(0);
-            $table->integer('dislike_counter')->default(0);
+            $table->longText('contenus')->nullable();
             $table->integer('counter')->default(0);
             $table->boolean('status')->default(0);
             $table->string('slug')->nullable();

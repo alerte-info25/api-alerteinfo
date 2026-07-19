@@ -5,10 +5,7 @@ namespace Database\Seeders;
 use App\Models\Pays;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
-<<<<<<< HEAD
 use App\Models\Redactions\CountriesModels;
-=======
->>>>>>> 53b93523c87aabea6bd233d8185d34c743b64544
 
 class PaysTableSeeder extends Seeder
 {
@@ -19,11 +16,7 @@ class PaysTableSeeder extends Seeder
      */
     public function run()
     {
-<<<<<<< HEAD
         CountriesModels::truncate();
-=======
-        Pays::truncate();
->>>>>>> 53b93523c87aabea6bd233d8185d34c743b64544
 
         $data = [
             [
@@ -34,12 +27,8 @@ class PaysTableSeeder extends Seeder
                 'currency' => "XOF",
                 'created_at' => date("Y-m-d H:i:s", strtotime(now())),
                 'updated_at' => date("Y-m-d H:i:s", strtotime(now()))
-<<<<<<< HEAD
             ],
             [
-=======
-            ],[
->>>>>>> 53b93523c87aabea6bd233d8185d34c743b64544
                 'pays' => "Burkina Faso",
                 'flag' => "",
                 'iso_code' => "BF",
