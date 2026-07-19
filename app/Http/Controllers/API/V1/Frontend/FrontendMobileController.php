@@ -2257,16 +2257,9 @@ class FrontendMobileController extends Controller
                 ];
             }
 
-            if (!isset($json['success'])) {
-                return [
-                    'status' => false,
-                    'message' => $json['message'] ?? 'Erreur GeniusPay'
-                ];
-            }
-
             $json = $response->json();
 
-            Log::info('GENIUSPAY MOBILE RESPONSE', $json);
+            Log::info('GENIUSPAY MOBILE RESPONSE', is_array($json) ? $json : ['raw' => $response->body()]);
 
             if (
                 !isset($json['success']) ||
@@ -2275,6 +2268,7 @@ class FrontendMobileController extends Controller
                 return [
                     'status' => false,
                     'message' => $json['error']['message']
+                        ?? $json['message']
                         ?? 'Erreur GeniusPay'
                 ];
             }
